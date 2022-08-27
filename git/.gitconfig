@@ -1,0 +1,7 @@
+[user]
+	email = jack.kitto@gmail.com
+	name = Jack Kitto
+[pull]
+	rebase = true
+[credential]
+	helper = store
