@@ -1,6 +1,12 @@
 #!/usr/bin/env bash
-set -e
+set -euo pipefail
 CODE_DIR="${HOME}/code"
-echo "📁 Ensuring ${CODE_DIR} exists..."
-mkdir -p "${CODE_DIR}"
-echo "✅ Code directory ready"
+
+if [ -d "${CODE_DIR}" ]; then
+  echo "✅  Code directory exists (${CODE_DIR})"
+else
+  echo "📁  Creating ${CODE_DIR}"
+  mkdir -p "${CODE_DIR}"
+fi
+
+echo "🧾  $(ls -ld "${CODE_DIR}")"

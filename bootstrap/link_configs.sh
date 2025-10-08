@@ -4,39 +4,32 @@ echo "🔗 Linking modular configs from configs.list..."
 
 MANIFEST="${HOME}/.dotfiles/configs.list"
 CLONE_DIR="${HOME}/.dotfiles/external-configs"
-
 mkdir -p "$CLONE_DIR"
 
-# Read line‑by‑line, skip comments or blanks
 while read -r repo dest || [ -n "$repo" ]; do
-  [[ -z "$repo" ]] && continue
-  [[ "$repo" =~ ^# ]] && continue
-
-  # split into vars
+  [[ -z "$repo" || "$repo" =~ ^# ]] && continue
   REPO_URL="$repo"
-  DEST_PATH=$(eval echo "$dest") # expand ~ etc.
+  DEST_PATH=$(eval echo "$dest")
   NAME=$(basename "$REPO_URL" .git)
   TARGET_DIR="${CLONE_DIR}/${NAME}"
 
-  echo ""
   echo "➡️  $NAME → $DEST_PATH"
 
-  # clone or update
   if [ -d "$TARGET_DIR/.git" ]; then
-    echo "   Updating existing repo..."
+    git -C "$TARGET_DIR" fetch --depth 1 origin main >/dev/null 2>&1 || true
     git -C "$TARGET_DIR" pull --ff-only || true
   else
-    echo "   Cloning $REPO_URL..."
     git clone --depth 1 "$REPO_URL" "$TARGET_DIR"
   fi
 
-  # link destination
   mkdir -p "$(dirname "$DEST_PATH")"
-  if [ -e "$DEST_PATH" ] || [ -L "$DEST_PATH" ]; then
-    rm -rf "$DEST_PATH"
+
+  if [ -e "$DEST_PATH" ] && [ ! -L "$DEST_PATH" ]; then
+    mv "$DEST_PATH" "${DEST_PATH}.bak.$(date +%s)"
+    echo "   💾 Backed up existing file."
   fi
+
   ln -sfn "$TARGET_DIR" "$DEST_PATH"
 done <"$MANIFEST"
 
-echo ""
-echo "✅ All configs linked successfully!"
+echo "✅  Configs linked successfully!"
