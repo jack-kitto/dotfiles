@@ -1,10 +1,7 @@
 #!/usr/bin/env bash
 #
-# Safe / Idempotent Nix installer
-# - Detects existing installs
-# - Falls back to single-user if inside container or SELinux=enforcing
-# ---------------------------------------------------------------
-
+# Safe, container‑aware Nix installer
+# ----------------------------------
 set -euo pipefail
 green() { printf "\033[1;32m%s\033[0m\n" "$@"; }
 yellow() { printf "\033[1;33m%s\033[0m\n" "$@"; }
@@ -18,25 +15,32 @@ if command -v nix >/dev/null 2>&1; then
 fi
 
 # ---------------------------------------------------------------
-# Detect containerization or SELinux
+# Environment detection helpers
 # ---------------------------------------------------------------
-
 is_container() {
-  grep -qE 'container=|distrobox|podman|docker' /proc/1/environ 2>/dev/null ||
-    grep -qiE 'distrobox|toolbox' /etc/os-release 2>/dev/null ||
-    grep -E -q 'docker|podman' /proc/1/cgroup 2>/dev/null
+  # Toolbox / Distrobox
+  [[ -n "${IN_TOOLBOX:-}" ]] || [[ -n "${DISTROBOX_ENTERED:-}" ]] && return 0
+  # Generic container detection
+  grep -qE 'container=' /proc/1/environ 2>/dev/null && return 0
+  grep -qiE 'toolbox|distrobox|docker|podman' /etc/os-release 2>/dev/null && return 0
+  grep -E -q 'docker|podman' /proc/1/cgroup 2>/dev/null && return 0
+  return 1
 }
 
-is_selinux_enforcing() {
-  sestatus 2>/dev/null | grep -qi 'enforcing'
-}
+# ---------------------------------------------------------------
+# Install strategy
+# ---------------------------------------------------------------
+OS="$(uname -s)"
 
-if [[ "$(uname -s)" == "Linux" ]]; then
-  if is_container || is_selinux_enforcing; then
-    yellow "🐧 Detected SELinux or container — using single‑user Nix install."
+if [[ "$OS" == "Linux" ]]; then
+  if is_container; then
+    yellow "🐧 Detected Toolbox/Distrobox or other container — using single‑user Nix install."
+    curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
+  elif command -v getenforce >/dev/null 2>&1 && [[ "$(getenforce)" == "Enforcing" ]]; then
+    yellow "🐧 SELinux enforcing detected — using single‑user Nix install."
     curl -L https://nixos.org/nix/install | sh -s -- --no-daemon
   else
-    green "⬇️ Installing Nix (multi‑user daemon)..."
+    green "⬇️  Installing multi‑user Nix daemon..."
     sh <(curl -L https://nixos.org/nix/install) --daemon --no-channel-add
   fi
 else
@@ -45,16 +49,18 @@ else
 fi
 
 # ---------------------------------------------------------------
-# Activate profile immediately
+# Activate in‑shell
 # ---------------------------------------------------------------
-if [ -f "${HOME}/.nix-profile/etc/profile.d/nix.sh" ]; then
+if [ -f "$HOME/.nix-profile/etc/profile.d/nix.sh" ]; then
   # shellcheck disable=SC1091
-  . "${HOME}/.nix-profile/etc/profile.d/nix.sh"
+  . "$HOME/.nix-profile/etc/profile.d/nix.sh"
   green "✅ Activated single‑user Nix profile."
 elif [ -f /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh ]; then
   # shellcheck disable=SC1091
   . /nix/var/nix/profiles/default/etc/profile.d/nix-daemon.sh
   green "✅ Activated multi‑user Nix profile."
+else
+  yellow "⚠️  Nix install complete but profile not yet loaded (restart shell)."
 fi
 
-nix --version || yellow "⚠️  Nix installed but not yet in PATH (restart shell)."
+nix --version || yellow "⚠️  Nix installed but not yet on PATH."
