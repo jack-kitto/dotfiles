@@ -1,19 +1,19 @@
 #!/usr/bin/env bash
 #
-# Universal Bootstrap Setup Script
+# 🌱 Universal Bootstrap Setup Script
 # ---------------------------------------------------------------
 #   Clones dependencies, installs Nix + Devbox,
 #   applies base Nix config (macOS or Linux),
 #   imports keys, sets Git identities,
 #   links configs, and prepares ~/code workspace.
 #
-# Usage:
-#   bash setup.sh
+#   Compatible with SELinux (auto‑Toolbox/Distrobox)
 # ---------------------------------------------------------------
 
 set -euo pipefail
 
-REPO_DIR="${HOME}/.dotfiles"
+# Dynamically determine the repo root
+REPO_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CODE_DIR="${HOME}/code"
 
 # ---------------------------------------------------------------
@@ -29,16 +29,20 @@ die() {
 }
 
 # ---------------------------------------------------------------
-# Detect operating system
+# Detect operating system / environment
 # ---------------------------------------------------------------
 
 OS="$(uname -s)"
-case "${OS}" in
+PLATFORM="unknown"
+
+case "$OS" in
 Darwin)
   PLATFORM="macos"
   ;;
 Linux)
-  if getenforce 2>/dev/null | grep -q Enforcing; then
+  if command -v getenforce >/dev/null 2>&1 &&
+    [[ "$(getenforce 2>/dev/null)" == "Enforcing" ]] &&
+    [ -z "${IN_TOOLBOX:-}" ] && [ -z "${DISTROBOX_ENTERED:-}" ]; then
     PLATFORM="linux-selinux"
   else
     PLATFORM="linux"
@@ -52,22 +56,31 @@ esac
 green "🧭  Detected platform: ${PLATFORM}"
 
 # ---------------------------------------------------------------
-# Ensure the repo lives in ~/.dotfiles
+# SELinux → Toolbox/Distrobox hand‑off
 # ---------------------------------------------------------------
 
-if [ "$(pwd)" != "${REPO_DIR}" ]; then
-  if [ ! -d "${REPO_DIR}" ]; then
-    green "📦  Copying dotfiles into ${REPO_DIR}"
-    mkdir -p "$(dirname "${REPO_DIR}")"
-    cp -R . "${REPO_DIR}"
-  fi
-  cd "${REPO_DIR}"
+if [ "$PLATFORM" = "linux-selinux" ]; then
+  yellow "🧱  SELinux Enforcing detected — running inside Toolbox/Distrobox"
+
+  bash "${REPO_DIR}/bootstrap/create_toolbox.sh"
+
+  # if create_toolbox.sh returns at all, it failed
+  die "Failed to enter Toolbox/Distrobox environment. Please run:
+       ${REPO_DIR}/bootstrap/create_toolbox.sh"
 fi
 
-if [ "$PLATFORM" = "linux-selinux" ]; then
-  yellow "🧱 SELinux enforcing detected — switching to Toolbox/Distrobox environment"
-  bash bootstrap/create_toolbox.sh
-  exit 0
+# ---------------------------------------------------------------
+# Ensure the repo lives in ~/.dotfiles (optional)
+# ---------------------------------------------------------------
+
+if [ "$REPO_DIR" != "${HOME}/.dotfiles" ]; then
+  if [ ! -d "${HOME}/.dotfiles" ]; then
+    green "📦  Copying dotfiles into ~/.dotfiles"
+    mkdir -p "${HOME}"
+    cp -R "${REPO_DIR}" "${HOME}/.dotfiles"
+  fi
+  cd "${HOME}/.dotfiles"
+  export REPO_DIR="${HOME}/.dotfiles"
 fi
 
 # ---------------------------------------------------------------
@@ -127,3 +140,4 @@ echo "• Repo directory : ${REPO_DIR}"
 echo "• Code workspace : ${CODE_DIR}"
 echo "• Base Nix config applied for: ${PLATFORM}"
 echo "• Run: 'devbox shell' in any project to enter its environment."
+echo "• Re‑enter Toolbox later with: toolbox enter jack-dev   # or distrobox enter jack-dev"
