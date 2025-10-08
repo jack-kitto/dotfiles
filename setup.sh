@@ -34,9 +34,19 @@ die() {
 
 OS="$(uname -s)"
 case "${OS}" in
-Darwin) PLATFORM="macos" ;;
-Linux) PLATFORM="linux" ;;
-*) die "Unsupported OS: ${OS}" ;;
+Darwin)
+  PLATFORM="macos"
+  ;;
+Linux)
+  if getenforce 2>/dev/null | grep -q Enforcing; then
+    PLATFORM="linux-selinux"
+  else
+    PLATFORM="linux"
+  fi
+  ;;
+*)
+  die "Unsupported OS: ${OS}"
+  ;;
 esac
 
 green "🧭  Detected platform: ${PLATFORM}"
@@ -52,6 +62,12 @@ if [ "$(pwd)" != "${REPO_DIR}" ]; then
     cp -R . "${REPO_DIR}"
   fi
   cd "${REPO_DIR}"
+fi
+
+if [ "$PLATFORM" = "linux-selinux" ]; then
+  yellow "🧱 SELinux enforcing detected — switching to Toolbox/Distrobox environment"
+  bash bootstrap/create_toolbox.sh
+  exit 0
 fi
 
 # ---------------------------------------------------------------
