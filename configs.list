@@ -1,0 +1,22 @@
+# ------------------------------------------------------------------
+# Jack Kitto – Modular configuration manifest
+# Auto‑cloned and symlinked by bootstrap/link_configs.sh
+# Each line: <repo‑url> <destination‑path>
+# ------------------------------------------------------------------
+
+# ── Core editors ─────────────────────────────────────────────────
+git@github.com:jack-kitto/nvim.git              ~/.config/nvim
+
+# ── Shell environments ───────────────────────────────────────────
+git@github.com:jack-kitto/zsh-config.git        ~/.config/zsh
+git@github.com:jack-kitto/bash-config.git       ~/.config/bash
+
+# ── Terminal & tools ─────────────────────────────────────────────
+git@github.com:jack-kitto/tmux-config.git       ~/.config/tmux
+
+# ── Version control & networking ─────────────────────────────────
+git@github.com:jack-kitto/git-config.git        ~/.config/git
+git@github.com:jack-kitto/ssh-config.git        ~/.ssh/configs
+
+# ── Secrets (GPG / SSH / GitHub auth) ────────────────────────────
+git@github.com:jack-kitto/secrets-repo.git      ~/.dotfiles/secrets-repo
