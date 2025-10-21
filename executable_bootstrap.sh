@@ -6,8 +6,8 @@ echo "🚀 Bootstrapping dev environment..."
 # Install Nix if not installed
 if ! command -v nix >/dev/null 2>&1; then
   echo "📦 Installing Nix..."
-  sh <(curl -L https://nixos.org/nix/install) --daemon
-  . /etc/profile.d/nix.sh
+  sh <(curl -L https://nixos.org/nix/install) --no-daemon
+  . ~/.nix-profile/etc/profile.d/nix.sh
 fi
 
 # Apply configuration via Home Manager
