@@ -4,7 +4,7 @@ set -e
 echo "🔧 Installing dotfiles..."
 
 # Symlink configs into the home directory
-ln -sf ~/.dotfiles/.zshrc ~/.zshrc
+ln -sf ~/.dotfiles/.bashrc ~/.bashrc
 ln -sf ~/.dotfiles/.tmux.conf ~/.tmux.conf
 
 # Neovim and others under .config
