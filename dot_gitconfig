@@ -1,0 +1,22 @@
+[user]
+	email = jack@kitto.sh
+	name = Jack Kitto
+	signingkey = 2CA58AF7
+
+[filter "lfs"]
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
+	clean = git-lfs clean -- %f
+[push]
+	autoSetupRemote = true
+[credential]
+	helper = osxkeychain
+[commit]
+	gpgsign = true
+[diff]
+       tool = meld
+[difftool]
+	prompt = false
+[difftool "meld"]
+	cmd = meld "$LOCAL" "$REMOTE"
